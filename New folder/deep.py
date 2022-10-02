@@ -1,14 +1,16 @@
-# import tensorflow as tf
+import tensorflow as tf
 import os
 
 import pymysql
+import werkzeug.utils
 from keras.preprocessing.image import ImageDataGenerator
 # from keras.preprocessing import image
 # from tensorflow.keras.optimizers import Adam
 # from tensorflow.keras.utils import img_to_array
 from keras.models import load_model
 import cv2
-from flask import Flask,render_template
+from flask import Flask,render_template, jsonify, request
+import json
 
 
 
@@ -58,16 +60,16 @@ model.save("trained.h5")
 model = load_model("trained.h5")
 
 
-def check(val):
+def check(img1):
     eval_datagen = ImageDataGenerator(rescale=1 / 255)
 
     test_generator = eval_datagen.flow_from_directory(
-        'D:/University/Semester 5/chest_xray/test',
+        'D:/University/Semester 5/PDCWeb/chest_xray/test',
         target_size=(300, 300),
         batch_size=128,
         class_mode='binary'
     )
-    img= cv2.imread('D:/University/Semester 5/chest_xray/test/'+val)
+    img= cv2.imread('D:/University/Semester 5/PDCWeb/New folder/uploadedImages/'+img1)
     tempimg = img
     img = cv2.resize(img,(300,300))
     img = img/255.0
@@ -83,35 +85,27 @@ def check(val):
         prediction = "Normal"
         result = '0'
 
+    print(prediction)
+
     return result
-
-def data():
-    connection = pymysql.connect(host="localhost", user="root", passwd="",database="pdc" )
-    cursor = connection.cursor()
-
-    cursor.execute("SELECT picture from patientdetails order by userId desc limit 1")
-
-    val = cursor.fetchall()
-
-    val1 = check(val[0][0])
-
-
-    cursor.execute("UPDATE patientdetails set result="+val1+" order by userId desc limit 1")
-    connection.commit()
-
-    connection.close()
 
 
 app = Flask(__name__)
+response = ''
 
-@app.route("/",methods = ['POST','GET'])
+@app.route("/hello",methods = ['GET', 'POST'])
 def index():
-    data()
+
+    if(request.method == 'POST'):
+        imageFile = request.files['file']
+        filename = werkzeug.utils.secure_filename(imageFile.filename)
+        imageFile.save('D:/University/Semester 5/PDCWeb/New folder/uploadedImages/'+filename)
+        return check(filename)
     return 'hello'
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True,host='0.0.0.0', port='5000')
 
 
 
